@@ -309,6 +309,7 @@ function sendMessageWhenPressedEnter(event) {
             msgNo = noOfMsg + 1;
             showChat(true, document.getElementById("msg-box").value, msgNo);
         });
+        refreshMsgSet();
     }
 }
 
