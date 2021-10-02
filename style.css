@@ -34,7 +34,7 @@ canvas {
     margin-left: 30%;
 }
 
-#open-chat{
+#open-chat {
     position: fixed;
     top: 80px;
     margin-left: 50%;
@@ -99,9 +99,33 @@ button:hover, input:hover, img:hover {
     color: black;
 }
 
-.msg{
+.msg {
     background-color: skyblue;
     color: black;
-    border-radius: 20%;
+    border-radius: 5%;
     margin-left: 70%;
+    display: inline-table;
+    font-size: x-large;
+    padding: 7px 10px;
+}
+
+#msg-box {
+    width: 90%;
+    margin-left: 5%;
+    position: fixed;
+    bottom: 10%;
+    resize: vertical;
+}
+
+#no-msg-info {
+    text-align: center;
+    color: white;
+    font-size: 20px;
+}
+
+#helloBtn {
+    color: blue;
+    background-color: chartreuse;
+    font-size: x-large;
+    box-shadow: darkgray;
 }

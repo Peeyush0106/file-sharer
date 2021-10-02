@@ -6,26 +6,21 @@ var point_last_movements_bool = [false, false, false, false, false];
 var stoppedEllipses = [];
 var stopping_pos;
 var noOfBalls = 4;
-var randomClr1;
-var randomClr2;
 var pointColors;
 
 function setup() {
 	canvas = createCanvas(windowWidth, 30);
 	setPointPos();
 	stopping_pos = canvas.width / 2;
-	pointColors = setEllipseClrs();
 }
 
 function draw() {
 	clear();
 	if (loading_show) {
-		showLoadingAnim(randomClr1, randomClr2);
+		showLoadingAnim();
 		canvas.elt.style.display = "block";
 	}
 	else canvas.elt.style.display = "none";
-	randomClr1 = rgb(random(0, 255), random(0, 255), random(0, 255));
-	randomClr2 = rgb(random(0, 255), random(0, 255), random(0, 255));
 }
 
 function setPointPos() {
@@ -34,18 +29,10 @@ function setPointPos() {
 	}
 }
 
-function setEllipseClrs() {
-	var colors = [];
-	for (var i = 0; i < noOfBalls; i += 1) {
-		colors.push(rgb(random(0, 255), random(0, 255), random(0, 255)));
-	}
-	return colors;
-}
-
 function showLoadingAnim() {
 	for (var j = 0; j < point_positions.length; j++) {
 		if (point_positions[j] !== null) {
-			fill(pointColors[j]);
+			fill("blue");
 			noStroke();
 			ellipse(point_positions[j].x, point_positions[j].y, 12.5);
 			point_positions[j].x += ((j + 10) * 4) * loadBallsSpeed / 10;
@@ -57,12 +44,11 @@ function showLoadingAnim() {
 			}
 		}
 		else if (stoppedEllipses.length === noOfBalls) {
-			pointColors = setEllipseClrs();
-			displayStoppedEllipses(pointColors[j]);
+			displayStoppedEllipses("white");
 			runStoppedEllipses();
 		}
 		else {
-			displayStoppedEllipses(pointColors[j]);
+			displayStoppedEllipses("white");
 		}
 	}
 	if (stoppedEllipses[0] !== undefined && stoppedEllipses[0].x >= canvas.width) {

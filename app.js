@@ -3,17 +3,18 @@ var database = firebase.database();
 var storageRef = firebase.storage().ref();
 
 var attach, fileUpload, messages, msgPos, msgVals, txtElt, img_selected, cancelledUpload, choosingFile;
-
 // Connection indicators
 var noConnectionTimer = 0;
+var shownHelloGif = false;
+var msgInQueue = [];
 var connectingPAdded = false;
 var connectingP = document.createElement("p");
 connectingP.innerText = "Connecting to database...";
 var loading_show = false;
 var choosingFile = false;
 var fileAboutToUploadState = false;
-var documentAdjusted = false;
-var chatModeOn = false;
+var allMessages = "initialization";
+var directHelloShow = true;
 
 cancelledUpload = false;
 
@@ -31,20 +32,20 @@ uploadToDatabaseBtn.onclick = function () {
     loading_show = true;
     fileRef = storageRef.child(fileUpload.files[0].name);
     fileRef.put(fileUpload.files[0]).then(() => {
-        database.ref("messages").get().then((data) => {
-            if (data.exists()) {
-                var messages = 0;
-                for (const i in data.val()) {
-                    messages += 1;
-                }
-                console.log(messages);
-                uploadMessage(messages + 1);
-            }
-            else uploadMessage(1);
+        getNoOfMessages(function (noOfMsg) {
+            if (noOfMsg === 0) uploadMessage(1);
+            else uploadMessage(messages + 1);
         });
-
     });
 };
+
+function getNoOfMessages(functionToCall) {
+    database.ref("messages").get().then((data) => {
+        var messages = 0;
+        if (data.exists()) for (const i in data.val()) messages += 1;
+        functionToCall(messages);
+    });
+}
 
 function uploadMessage(msgNo) {
     storageRef.child(fileUpload.files[0].name).getDownloadURL().then(url => {
@@ -79,40 +80,149 @@ document.getElementById("cncl-btn").onclick = function () {
     fileAboutToUploadState = false;
 };
 
-var openChatBtn = document.getElementById("open-chat");
-openChatBtn.hidden = true;
-openChatBtn.onclick = function () {
-    openChatBtn.hidden = true;
-    uploadLocallyBtn.hidden = true;
-    fileUpload.hidden = true;
-    filePath.hidden = true;
-    uploadToDatabaseBtn.hidden = true;
-    uploadedImgElts.hidden = true;
-    chatModeOn = true;
-    loading_show = true;
-    connectingP.innerText = "Loading chat..";
-    if (!connectingPAdded) {
-        document.body.appendChild(connectingP);
-        connectingPAdded = true;
-    }
-    database.ref("messages").get().then((data) => {
-        for (const j in data.val()) {
-            const msg = data.val()[j];
-            message = document.createElement("a");
-            message.href = msg.fileURL;
-            if (msg.fileName.length > 15) fileName = msg.fileName.slice(0, 15) + " ...";
-            else fileName = msg.fileName;
-            message.innerText = "Open file: " + fileName;
-            message.target = "_blank";
-            document.body.appendChild(message);
-            message.className = "msg";
-            document.body.appendChild(document.createElement("br"));
-            document.body.appendChild(document.createElement("br"));
+setInterval(refreshMsgSet, 1000);
+
+function showChat(directLoad, addedMsg, msgNo) {
+    if (!directLoad) {
+        loading_show = true;
+        connectingP.innerText = "Loading chat..";
+        if (!connectingPAdded) {
+            document.body.appendChild(connectingP);
+            connectingPAdded = true;
         }
-        loading_show = false;
-        document.body.removeChild(connectingP);
+        database.ref("messages").get().then((data) => {
+            for (const j in data.val()) {
+                const msg = data.val()[j];
+                if (msg.fileURL && msg.fileName) {
+                    message = document.createElement("a");
+                    message.href = msg.fileURL;
+                    if (msg.fileName.length > 15) fileName = msg.fileName.slice(0, 15) + " ...";
+                    else fileName = msg.fileName;
+                    message.innerText = "Open file: " + fileName;
+                    message.target = "_blank";
+                    document.getElementById("messages").appendChild(message);
+                    message.className = "msg";
+                }
+                else if (msg.msg) {
+                    message = document.createElement("p");
+                    message.innerText = msg.msg;
+                    document.getElementById("messages").appendChild(message);
+                    message.className = "msg";
+                }
+                for (let k = 0; k < 2; k++) document.body.appendChild(document.createElement("br"));
+            }
+
+            loading_show = false;
+            if (connectingPAdded) {
+                document.body.removeChild(connectingP);
+                connectingPAdded = false;
+            }
+        });
+    }
+    else {
+        msgInQueue.push(addedMsg);
+        document.getElementById("msg-box").value = "";
+        database.ref("messages/" + msgNo).update({ msg: addedMsg });
+
+        var msgData, message;
+        message = document.createElement("p");
+        message.innerText = "sending message..";
+        document.getElementById("messages").appendChild(message);
+        message.id = "message-" + msgNo;
+        message.className = "msg";
+
+        database.ref("messages").get().then((data) => {
+            document.getElementById("messages").innerHTML = "";
+            msgData = data.val();
+            msgData[msgNo].msg = addedMsg
+            for (const j in msgData) {
+                const msg = msgData[j];
+                if (msg.fileURL && msg.fileName) {
+                    message = document.createElement("a");
+                    message.href = msg.fileURL;
+                    if (msg.fileName.length > 15) fileName = msg.fileName.slice(0, 15) + " ...";
+                    else fileName = msg.fileName;
+                    message.innerText = "Open file: " + fileName;
+                    message.target = "_blank";
+                    document.getElementById("messages").appendChild(message);
+                    message.className = "msg";
+                }
+                else if (msg.msg) {
+                    message = document.createElement("p");
+                    message.innerText = msg.msg;
+                    document.getElementById("messages").appendChild(message);
+                    message.className = "msg";
+                }
+                for (let k = 0; k < 2; k++) document.body.appendChild(document.createElement("br"));
+            }
+            msgInQueue_temp = msgInQueue;
+            console.log(msgInQueue);
+            for (var i = 1; i < msgInQueue_temp.length + 1; i++) {
+                msgInQueue = [];
+                console.log(msgInQueue);
+                msgInQueue[i - 1] = msgInQueue_temp[i];
+                // request successful
+                if (msgInQueue[i - 1] === undefined) msgInQueue[i - 1] = "";
+            }
+            console.log(msgInQueue);
+        });
+    }
+}
+
+function refreshMsgSet() {
+    database.ref("messages").get().then((data) => {
+        if (JSON.stringify(allMessages) !== JSON.stringify(data.val())) {
+            if (allMessages !== "initialization" && JSON.stringify(allMessages) !== null && data.val() === null) location.reload();
+            allMessages = data.val();
+            document.getElementById("messages").innerHTML = "";
+            msgData = data.val();
+            for (const j in msgData) {
+                const msg = msgData[j];
+                if (msg.fileURL && msg.fileName) {
+                    message = document.createElement("a");
+                    message.href = msg.fileURL;
+                    if (msg.fileName.length > 15) fileName = msg.fileName.slice(0, 15) + " ...";
+                    else fileName = msg.fileName;
+                    message.innerText = "Open file: " + fileName;
+                    message.target = "_blank";
+                    document.getElementById("messages").appendChild(message);
+                    message.className = "msg";
+                    for (let k = 0; k < 2; k++) document.body.appendChild(document.createElement("br"));
+                }
+                else if (msg.msg) {
+                    message = document.createElement("p");
+                    message.innerText = msg.msg;
+                    document.getElementById("messages").appendChild(message);
+                    message.className = "msg";
+                    for (let k = 0; k < 2; k++) document.body.appendChild(document.createElement("br"));
+                }
+            }
+        }
+        if (!data.exists()) {
+            setInterval(showHelloGif, 1000);
+        }
     });
 }
+
+function showHelloGif() {
+    database.ref("messages").get().then((data) => {
+        if (!data.exists() && !document.getElementById("no-msg-info")) {
+            console.log("gif");
+            var randomHelloGifNumber = randomNo(0, 3);
+            var allHelloGifs = ["hello.gif", "hello-2.gif", "hello-3.webp", "hello-4.gif"];
+            no_message_info = document.createElement("p");
+            no_message_info.innerHTML = `
+                    no messages yet.. <br>
+                    Start chatiting by saying <br> <button onclick="sendHello();" id="helloBtn"> Hello </button> <br><br>
+                    <img src=` + allHelloGifs[randomHelloGifNumber] + ` id="hello-gif" width=200 />
+                `;
+            no_message_info.id = "no-msg-info";
+            document.body.appendChild(no_message_info);
+        }
+    });
+}
+
+function randomNo(min, max) { return Math.round(Math.random() * (max - min)); }
 
 fileUpload.onchange = function () {
     if (fileUpload.files[0] && !cancelledUpload && choosingFile) {
@@ -126,10 +236,8 @@ fileUpload.onchange = function () {
             document.getElementById("uploaded-img").src = URL.createObjectURL(fileUpload.files[0]);
             document.getElementById("uploaded-img").alt = fileName;
         }
-        if (!chatModeOn) {
-            uploadLocallyBtn.hidden = true;
-            uploadedImgElts.hidden = false;
-        }
+        uploadLocallyBtn.hidden = true;
+        uploadedImgElts.hidden = false;
     }
 }
 
@@ -147,31 +255,20 @@ function checkConnection() {
             connected = snap.val();
             if (connected) {
                 noConnectionTimer = 0;
-                if (!chatModeOn) {
-                    if (!fileAboutToUploadState) {
-                        uploadLocallyBtn.hidden = false;
-                        openChatBtn.hidden = false;
-                    }
-                    loading_show = false;
-                    if (connectingPAdded) {
-                        document.body.removeChild(connectingP);
-                        connectingPAdded = false;
-                    }
-                    if (fileAboutToUploadState) {
-                        fileUpload.hidden = false;
-                        filePath.hidden = false;
-                        uploadToDatabaseBtn.hidden = false;
-                        uploadedImgElts.hidden = false;
-                        document.getElementById("cncl-btn").hidden = false;
-                    }
+                if (!fileAboutToUploadState) {
+                    uploadLocallyBtn.hidden = false;
                 }
-                if (!documentAdjusted) {
-                    document.body.style.transition = "1s";
-                    document.body.style.transform = "scale(.5)";
-                    setTimeout(function () {
-                        document.body.style.transform = "scale(1)";
-                        documentAdjusted = true;
-                    }, 1000);
+                loading_show = false;
+                if (connectingPAdded) {
+                    document.body.removeChild(connectingP);
+                    connectingPAdded = false;
+                }
+                if (fileAboutToUploadState) {
+                    fileUpload.hidden = false;
+                    filePath.hidden = false;
+                    uploadToDatabaseBtn.hidden = false;
+                    uploadedImgElts.hidden = false;
+                    document.getElementById("cncl-btn").hidden = false;
                 }
             }
             else {
@@ -180,7 +277,6 @@ function checkConnection() {
                 filePath.hidden = true;
                 uploadToDatabaseBtn.hidden = true;
                 uploadedImgElts.hidden = true;
-                openChatBtn.hidden = true;
                 document.getElementById("cncl-btn").hidden = true;
 
                 if (noConnectionTimer >= 10) {
@@ -203,4 +299,21 @@ function checkConnection() {
         });
         checkConnection();
     }, 2000);
+}
+
+function sendMessageWhenPressedEnter(event) {
+    if ((event.keyCode === 13 && !event.shiftKey && document.getElementById("msg-box").value !== "")) {
+        event.preventDefault();
+        console.log("msg sent");
+        getNoOfMessages(function (noOfMsg) {
+            msgNo = noOfMsg + 1;
+            showChat(true, document.getElementById("msg-box").value, msgNo);
+        });
+    }
+}
+
+function sendHello() {
+    console.log("helloSent");
+    no_message_info.innerHTML = "";
+    showChat(true, "hello", 1);
 }

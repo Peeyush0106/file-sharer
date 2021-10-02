@@ -39,9 +39,8 @@
 		<input type="file" id="file-upload" style="display: none" />
 	</form>
 
-	<button id="open-chat">
-		Open Chat
-	</button>
+	<textarea type="text" placeholder="Type your message..." name="Chat message" id="msg-box"
+		onkeypress="sendMessageWhenPressedEnter(event)" maxlength="5000" ></textarea>
 
 	<br><br><br><br><br><br><br><br><br><br>
 
@@ -64,6 +63,8 @@
 			</p>
 		</button>
 	</div>
-	
+
+	<div id="messages"></div>
+
 	<script src="app.js"></script>
 </body>
